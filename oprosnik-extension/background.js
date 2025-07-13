@@ -7,136 +7,152 @@ console.log('🚀 Background Service Worker с активным монитори
 
 // Функции для выполнения на странице (должны быть вне класса)
 function extractAgentStatus() {
-    const statusEl = document.querySelector('#voice-state-select-headerOptionText');
-    return {
-        status: statusEl ? statusEl.textContent.trim() : null,
-        timestamp: Date.now()
-    };
+    try {
+        const statusEl = document.querySelector('#voice-state-select-headerOptionText');
+        return {
+            status: statusEl ? statusEl.textContent.trim() : null,
+            timestamp: Date.now()
+        };
+    } catch (error) {
+        console.error('Ошибка при извлечении статуса агента:', error);
+        return { status: null, timestamp: Date.now() };
+    }
 }
 
 function extractCallData() {
-    const data = {
-        phone: null,
-        duration: null,
-        region: null,
-        timestamp: Date.now()
-    };
-    
-    // Ищем номер телефона
-    const phoneEl = document.querySelector('[aria-label*="Участник"]');
-    if (phoneEl) {
-        data.phone = phoneEl.textContent.trim();
-    }
-    
-    // Подробная диагностика всех элементов с таймерами
-    console.log('🔍 Диагностика элементов таймера:');
-    
-    // Все элементы с role="timer"
-    const timerRoleElements = document.querySelectorAll('[role="timer"]');
-    console.log('Элементы с role="timer":', timerRoleElements.length);
-    timerRoleElements.forEach((el, i) => {
-        console.log(`Timer ${i}:`, {
-            id: el.id,
-            textContent: el.textContent,
-            ariaLabel: el.getAttribute('aria-label'),
-            classes: el.className
-        });
-    });
-    
-    // Все элементы с классами timer
-    const timerClassElements = document.querySelectorAll('[class*="timer"]');
-    console.log('Элементы с классом timer:', timerClassElements.length);
-    timerClassElements.forEach((el, i) => {
-        const text = el.textContent.trim();
-        if (/\d{2}:\d{2}:\d{2}/.test(text)) {
-            console.log(`Timer class ${i} (валидное время):`, {
+    try {
+        const data = {
+            phone: null,
+            duration: null,
+            region: null,
+            timestamp: Date.now()
+        };
+        
+        // Ищем номер телефона
+        const phoneEl = document.querySelector('[aria-label*="Участник"]');
+        if (phoneEl) {
+            data.phone = phoneEl.textContent.trim();
+        }
+        
+        // Подробная диагностика всех элементов с таймерами
+        console.log('🔍 Диагностика элементов таймера:');
+        
+        // Все элементы с role="timer"
+        const timerRoleElements = document.querySelectorAll('[role="timer"]');
+        console.log('Элементы с role="timer":', timerRoleElements.length);
+        timerRoleElements.forEach((el, i) => {
+            console.log(`Timer ${i}:`, {
                 id: el.id,
-                textContent: text,
+                textContent: el.textContent,
+                ariaLabel: el.getAttribute('aria-label'),
                 classes: el.className
             });
-        }
-    });
-    
-    // Специфические селекторы на основе HTML структуры
-    const specificSelectors = [
-        '[role="timer"]',                                   // Основной селектор
-        '[class*="timer-timer"]',                           // По классу
-        '[id*="call-timer"]',                               // По ID
-        '[aria-label*="Общее время"]',                      // По aria-label
-        '.callcontrol-timer-7KaNm [role="timer"]',          // Более специфичный
-        '[id$="call-timer"]',                               // ID заканчивается на call-timer
-        '.timer-timer-2ZG4P',                               // Точный класс из HTML
-        '[class*="callcontrol-timer"] [role="timer"]'       // Комбинированный селектор
-    ];
-    
-    for (const selector of specificSelectors) {
-        try {
-            const timerEl = document.querySelector(selector);
-            if (timerEl && timerEl.textContent.trim()) {
-                const timerText = timerEl.textContent.trim();
-                console.log(`Проверяем селектор ${selector}: "${timerText}"`);
-                
-                // Проверяем, что это похоже на время (формат ЧЧ:ММ:СС)
-                if (/\d{2}:\d{2}:\d{2}/.test(timerText)) {
-                    data.duration = timerText;
-                    console.log(`✅ Время найдено через селектор ${selector}: ${timerText}`);
-                    break;
-                }
-            }
-        } catch (e) {
-            console.log(`❌ Ошибка с селектором ${selector}:`, e.message);
-        }
-    }
-    
-    // Поиск всех элементов содержащих время
-    if (!data.duration) {
-        console.log('🔍 Поиск времени во всех элементах...');
-        const allElements = document.querySelectorAll('*');
-        let found = false;
+        });
         
-        for (const el of allElements) {
-            const text = el.textContent?.trim() || '';
-            if (/^\d{2}:\d{2}:\d{2}$/.test(text)) {
-                console.log('📍 Найден элемент с временем:', {
-                    text: text,
+        // Все элементы с классами timer
+        const timerClassElements = document.querySelectorAll('[class*="timer"]');
+        console.log('Элементы с классом timer:', timerClassElements.length);
+        timerClassElements.forEach((el, i) => {
+            const text = el.textContent.trim();
+            if (/\d{2}:\d{2}:\d{2}/.test(text)) {
+                console.log(`Timer class ${i} (валидное время):`, {
                     id: el.id,
-                    className: el.className,
-                    tagName: el.tagName,
-                    ariaLabel: el.getAttribute('aria-label'),
-                    role: el.getAttribute('role')
+                    textContent: text,
+                    classes: el.className
                 });
-                
-                if (!found) {
-                    data.duration = text;
-                    found = true;
+            }
+        });
+        
+        // Специфические селекторы на основе HTML структуры
+        const specificSelectors = [
+            '[role="timer"]',                                   // Основной селектор
+            '[class*="timer-timer"]',                           // По классу
+            '[id*="call-timer"]',                               // По ID
+            '[aria-label*="Общее время"]',                      // По aria-label
+            '.callcontrol-timer-7KaNm [role="timer"]',          // Более специфичный
+            '[id$="call-timer"]',                               // ID заканчивается на call-timer
+            '.timer-timer-2ZG4P',                               // Точный класс из HTML
+            '[class*="callcontrol-timer"] [role="timer"]'       // Комбинированный селектор
+        ];
+        
+        for (const selector of specificSelectors) {
+            try {
+                const timerEl = document.querySelector(selector);
+                if (timerEl && timerEl.textContent.trim()) {
+                    const timerText = timerEl.textContent.trim();
+                    console.log(`Проверяем селектор ${selector}: "${timerText}"`);
+                    
+                    // Проверяем, что это похоже на время (формат ЧЧ:ММ:СС)
+                    if (/\d{2}:\d{2}:\d{2}/.test(timerText)) {
+                        data.duration = timerText;
+                        console.log(`✅ Время найдено через селектор ${selector}: ${timerText}`);
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.log(`❌ Ошибка с селектором ${selector}:`, e.message);
+            }
+        }
+        
+        // Поиск всех элементов содержащих время
+        if (!data.duration) {
+            console.log('🔍 Поиск времени во всех элементах...');
+            const allElements = document.querySelectorAll('*');
+            let found = false;
+            
+            for (const el of allElements) {
+                const text = el.textContent?.trim() || '';
+                if (/^\d{2}:\d{2}:\d{2}$/.test(text)) {
+                    console.log('📍 Найден элемент с временем:', {
+                        text: text,
+                        id: el.id,
+                        className: el.className,
+                        tagName: el.tagName,
+                        ariaLabel: el.getAttribute('aria-label'),
+                        role: el.getAttribute('role')
+                    });
+                    
+                    if (!found) {
+                        data.duration = text;
+                        found = true;
+                    }
                 }
             }
         }
-    }
-    
-    // Ищем регион в call variable value
-    const regionEl = document.querySelector('[class*="callVariableValue"] span');
-    if (regionEl) {
-        data.region = regionEl.textContent.trim();
-    }
-    
-    // Альтернативный поиск региона по id
-    if (!data.region) {
-        const regionAltEl = document.querySelector('[id*="call-header-variable-value"]');
-        if (regionAltEl) {
-            data.region = regionAltEl.textContent.trim();
+        
+        // Ищем регион в call variable value
+        const regionEl = document.querySelector('[class*="callVariableValue"] span');
+        if (regionEl) {
+            data.region = regionEl.textContent.trim();
         }
+        
+        // Альтернативный поиск региона по id
+        if (!data.region) {
+            const regionAltEl = document.querySelector('[id*="call-header-variable-value"]');
+            if (regionAltEl) {
+                data.region = regionAltEl.textContent.trim();
+            }
+        }
+        
+        // Финальное логирование
+        console.log('📊 Финальные извлеченные данные:', {
+            phone: data.phone,
+            duration: data.duration,
+            region: data.region,
+            success: !!(data.phone && data.duration && data.region)
+        });
+        
+        return data;
+    } catch (error) {
+        console.error('Ошибка при извлечении данных звонка:', error);
+        return {
+            phone: null,
+            duration: null,
+            region: null,
+            timestamp: Date.now(),
+            error: error.message
+        };
     }
-    
-    // Финальное логирование
-    console.log('📊 Финальные извлеченные данные:', {
-        phone: data.phone,
-        duration: data.duration,
-        region: data.region,
-        success: !!(data.phone && data.duration && data.region)
-    });
-    
-    return data;
 }
 
 // Основной класс для мониторинга Finesse
@@ -158,11 +174,21 @@ class FinesseActiveMonitor {
         this.statusCheckInterval = 3000; // Проверка статуса каждые 3 сек
         this.activeCallInterval = 1000;  // Во время звонка каждую секунду
         
+        // Флаги для предотвращения race conditions
+        this.isProcessingCall = false;
+        this.isCapturingData = false;
+        
+        // Таймеры для очистки
+        this.activeCallTimer = null;
+        this.postCallTimer = null;
+        
         this.init();
     }
     
     // Форматирование длительности из миллисекунд в ЧЧ:ММ:СС
     formatDuration(ms) {
+        if (!ms || ms < 0) return '00:00:00';
+        
         const totalSeconds = Math.floor(ms / 1000);
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -174,37 +200,49 @@ class FinesseActiveMonitor {
     async init() {
         console.log('📡 Инициализация FinesseActiveMonitor...');
         
-        // Загружаем сохраненные данные
-        await this.loadStoredData();
-        
-        // Находим вкладку Finesse
-        await this.findFinesseTab();
-        
-        // Создаем alarm для периодической проверки
-        chrome.alarms.create('finesseStatusCheck', {
-            periodInMinutes: 0.05 // каждые 3 секунды
-        });
-        
-        // Слушаем изменения вкладок
-        chrome.tabs.onUpdated.addListener(this.handleTabUpdate.bind(this));
-        chrome.tabs.onRemoved.addListener(this.handleTabRemoved.bind(this));
+        try {
+            // Загружаем сохраненные данные
+            await this.loadStoredData();
+            
+            // Находим вкладку Finesse
+            await this.findFinesseTab();
+            
+            // Создаем alarm для периодической проверки
+            await chrome.alarms.create('finesseStatusCheck', {
+                periodInMinutes: 0.05 // каждые 3 секунды
+            });
+            
+            // Слушаем изменения вкладок
+            chrome.tabs.onUpdated.addListener(this.handleTabUpdate.bind(this));
+            chrome.tabs.onRemoved.addListener(this.handleTabRemoved.bind(this));
+            
+            console.log('✅ Инициализация завершена');
+        } catch (error) {
+            console.error('❌ Ошибка инициализации:', error);
+        }
     }
     
     async findFinesseTab() {
-        const tabs = await chrome.tabs.query({
-            url: "https://ssial000ap008.si.rt.ru:8445/desktop/container/*"
-        });
-        
-        if (tabs.length > 0) {
-            this.finesseTabId = tabs[0].id;
-            console.log('✅ Найдена вкладка Finesse:', this.finesseTabId);
-            this.monitoringActive = true;
-            return true;
+        try {
+            const tabs = await chrome.tabs.query({
+                url: "https://ssial000ap008.si.rt.ru:8445/desktop/container/*"
+            });
+            
+            if (tabs.length > 0) {
+                this.finesseTabId = tabs[0].id;
+                console.log('✅ Найдена вкладка Finesse:', this.finesseTabId);
+                this.monitoringActive = true;
+                return true;
+            }
+            
+            console.log('❌ Вкладка Finesse не найдена');
+            this.monitoringActive = false;
+            return false;
+        } catch (error) {
+            console.error('❌ Ошибка поиска вкладки Finesse:', error);
+            this.monitoringActive = false;
+            return false;
         }
-        
-        console.log('❌ Вкладка Finesse не найдена');
-        this.monitoringActive = false;
-        return false;
     }
     
     // Обработка обновления вкладок
@@ -222,6 +260,19 @@ class FinesseActiveMonitor {
             console.log('❌ Вкладка Finesse закрыта');
             this.finesseTabId = null;
             this.monitoringActive = false;
+            this.cleanupTimers();
+        }
+    }
+    
+    // Очистка таймеров
+    cleanupTimers() {
+        if (this.activeCallTimer) {
+            clearTimeout(this.activeCallTimer);
+            this.activeCallTimer = null;
+        }
+        if (this.postCallTimer) {
+            clearTimeout(this.postCallTimer);
+            this.postCallTimer = null;
         }
     }
     
@@ -244,14 +295,13 @@ class FinesseActiveMonitor {
             }
         } catch (error) {
             console.error('❌ Ошибка при проверке статуса:', error);
-            this.monitoringActive = false;
+            // Не отключаем мониторинг при ошибке, просто логируем
         }
     }
     
-    
     // Обработка данных статуса
     async processStatusData(data) {
-        if (!data.status) return;
+        if (!data || !data.status) return;
         
         const currentStatus = data.status;
         const previousStatus = this.lastAgentStatus;
@@ -287,7 +337,7 @@ class FinesseActiveMonitor {
                 console.log('✅ Агент готов к новым звонкам');
                 // Делаем дополнительный захват данных в статусе "Готов"
                 // В этом статусе данные могут быть ещё доступны
-                setTimeout(async () => {
+                this.postCallTimer = setTimeout(async () => {
                     console.log('📊 Дополнительный захват в статусе "Готов"');
                     await this.captureCallData();
                 }, 500);
@@ -301,6 +351,11 @@ class FinesseActiveMonitor {
     startActiveCallMonitoring() {
         console.log('🎯 Запуск активного мониторинга звонка');
         
+        // Очищаем предыдущий таймер если есть
+        if (this.activeCallTimer) {
+            clearTimeout(this.activeCallTimer);
+        }
+        
         // Создаем более частый alarm
         chrome.alarms.create('activeCallMonitor', {
             periodInMinutes: 0.0167 // каждую секунду
@@ -312,7 +367,9 @@ class FinesseActiveMonitor {
     
     // Захват данных активного звонка
     async captureCallData() {
-        if (!this.finesseTabId) return;
+        if (!this.finesseTabId || this.isCapturingData) return;
+        
+        this.isCapturingData = true;
         
         try {
             const results = await chrome.scripting.executeScript({
@@ -330,18 +387,25 @@ class FinesseActiveMonitor {
             }
         } catch (error) {
             console.error('❌ Ошибка захвата данных звонка:', error);
+        } finally {
+            this.isCapturingData = false;
         }
     }
     
-    
     // Быстрый захват в статусе "Завершение" - только первые 0-3 секунды
     async startPostCallCapture() {
+        if (this.isProcessingCall) {
+            console.log('⚠️ Захват уже в процессе, пропускаем');
+            return;
+        }
+        
         console.log('🔄 Запуск быстрого захвата в статусе "Завершение"');
         
         this.isInCall = false;
+        this.isProcessingCall = true;
         
         // Останавливаем активный мониторинг
-        chrome.alarms.clear('activeCallMonitor');
+        await chrome.alarms.clear('activeCallMonitor');
         
         // Быстрые попытки захвата только в первые 3 секунды статуса "Завершение"
         let captureAttempts = 0;
@@ -383,90 +447,102 @@ class FinesseActiveMonitor {
             }
             
             // Следующая попытка через 100мс (очень быстро)
-            setTimeout(attemptCapture, 100);
+            this.activeCallTimer = setTimeout(attemptCapture, 100);
         };
         
         // Начинаем сразу, без задержки
-        attemptCapture();
+        await attemptCapture();
     }
     
     // Финализация с использованием вычисленной длительности
     async finalizeCallWithCalculatedDuration() {
-        // Используем данные из currentCallData, но заменяем длительность на вычисленную
-        const callData = {
-            phone: this.currentCallData?.phone || 'Неизвестно',
-            duration: this.calculatedDuration || '00:00:00',
-            region: this.currentCallData?.region || 'Не указан',
-            timestamp: Date.now(),
-            source: 'calculated' // Помечаем, что длительность вычислена
-        };
-        
-        console.log('💾 Финализация с вычисленной длительностью:', callData);
-        
-        // Добавляем метаданные
-        const finalCallData = {
-            ...callData,
-            completedAt: new Date().toISOString(),
-            savedAt: Date.now(),
-            callStartTime: this.callStartTime,
-            callEndTime: this.callEndTime
-        };
-        
-        // Добавляем в историю
-        this.callHistory.unshift(finalCallData);
-        if (this.callHistory.length > 10) {
-            this.callHistory = this.callHistory.slice(0, 10);
+        try {
+            // Используем данные из currentCallData, но заменяем длительность на вычисленную
+            const callData = {
+                phone: this.currentCallData?.phone || 'Неизвестно',
+                duration: this.calculatedDuration || '00:00:00',
+                region: this.currentCallData?.region || 'Не указан',
+                timestamp: Date.now(),
+                source: 'calculated' // Помечаем, что длительность вычислена
+            };
+            
+            console.log('💾 Финализация с вычисленной длительностью:', callData);
+            
+            // Добавляем метаданные
+            const finalCallData = {
+                ...callData,
+                completedAt: new Date().toISOString(),
+                savedAt: Date.now(),
+                callStartTime: this.callStartTime,
+                callEndTime: this.callEndTime
+            };
+            
+            // Добавляем в историю
+            this.callHistory.unshift(finalCallData);
+            if (this.callHistory.length > 10) {
+                this.callHistory = this.callHistory.slice(0, 10);
+            }
+            
+            // Сохраняем в chrome.storage
+            await this.saveData();
+            
+            // Очищаем данные звонка
+            this.currentCallData = null;
+            this.callStartTime = null;
+            this.callEndTime = null;
+            this.calculatedDuration = null;
+            this.isProcessingCall = false;
+            
+            console.log('✅ Звонок сохранен с вычисленной длительностью');
+        } catch (error) {
+            console.error('❌ Ошибка финализации с вычисленной длительностью:', error);
+            this.isProcessingCall = false;
         }
-        
-        // Сохраняем в chrome.storage
-        await this.saveData();
-        
-        // Очищаем данные звонка
-        this.currentCallData = null;
-        this.callStartTime = null;
-        this.callEndTime = null;
-        this.calculatedDuration = null;
-        
-        console.log('✅ Звонок сохранен с вычисленной длительностью');
     }
     
     // Финализация и сохранение звонка (с данными из интерфейса)
     async finalizeCall() {
-        if (!this.currentCallData) {
-            console.warn('⚠️ Нет данных для сохранения, используем вычисленную длительность');
-            await this.finalizeCallWithCalculatedDuration();
-            return;
+        try {
+            if (!this.currentCallData) {
+                console.warn('⚠️ Нет данных для сохранения, используем вычисленную длительность');
+                await this.finalizeCallWithCalculatedDuration();
+                return;
+            }
+            
+            console.log('💾 Финализация звонка с данными из интерфейса:', this.currentCallData);
+            
+            // Добавляем метаданные
+            const finalCallData = {
+                ...this.currentCallData,
+                completedAt: new Date().toISOString(),
+                savedAt: Date.now(),
+                source: 'interface', // Помечаем, что данные из интерфейса
+                callStartTime: this.callStartTime,
+                callEndTime: this.callEndTime,
+                calculatedDuration: this.calculatedDuration // Сохраняем и вычисленную для сравнения
+            };
+            
+            // Добавляем в историю
+            this.callHistory.unshift(finalCallData);
+            if (this.callHistory.length > 10) {
+                this.callHistory = this.callHistory.slice(0, 10);
+            }
+            
+            // Сохраняем в chrome.storage
+            await this.saveData();
+            
+            // Очищаем данные звонка
+            this.currentCallData = null;
+            this.callStartTime = null;
+            this.callEndTime = null;
+            this.calculatedDuration = null;
+            this.isProcessingCall = false;
+            
+            console.log('✅ Звонок сохранен с данными из интерфейса');
+        } catch (error) {
+            console.error('❌ Ошибка финализации звонка:', error);
+            this.isProcessingCall = false;
         }
-        
-        console.log('💾 Финализация звонка с данными из интерфейса:', this.currentCallData);
-        
-        // Добавляем метаданные
-        const finalCallData = {
-            ...this.currentCallData,
-            completedAt: new Date().toISOString(),
-            savedAt: Date.now(),
-            source: 'interface', // Помечаем, что данные из интерфейса
-            callStartTime: this.callStartTime,
-            callEndTime: this.callEndTime,
-            calculatedDuration: this.calculatedDuration // Сохраняем и вычисленную для сравнения
-        };
-        
-        // Добавляем в историю
-        this.callHistory.unshift(finalCallData);
-        if (this.callHistory.length > 10) {
-            this.callHistory = this.callHistory.slice(0, 10);
-        }
-        
-        // Сохраняем в chrome.storage
-        await this.saveData();
-        
-        // Очищаем данные звонка
-        this.currentCallData = null;
-        this.callStartTime = null;
-        this.callEndTime = null;
-        this.calculatedDuration = null;
-        
-        console.log('✅ Звонок сохранен с данными из интерфейса');
     }
     
     // Сохранение данных в chrome.storage
@@ -492,7 +568,7 @@ class FinesseActiveMonitor {
                 'lastAgentStatus'
             ]);
             
-            if (data.callHistory) {
+            if (data.callHistory && Array.isArray(data.callHistory)) {
                 this.callHistory = data.callHistory;
                 console.log(`📚 Загружена история: ${this.callHistory.length} звонков`);
             }
@@ -511,34 +587,43 @@ const monitor = new FinesseActiveMonitor();
 
 // Обработчик alarm событий
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-    if (alarm.name === 'finesseStatusCheck') {
-        await monitor.checkAgentStatus();
-    } else if (alarm.name === 'activeCallMonitor') {
-        await monitor.captureCallData();
+    try {
+        if (alarm.name === 'finesseStatusCheck') {
+            await monitor.checkAgentStatus();
+        } else if (alarm.name === 'activeCallMonitor') {
+            await monitor.captureCallData();
+        }
+    } catch (error) {
+        console.error('❌ Ошибка в обработчике alarm:', error);
     }
 });
 
 // Обработчик сообщений от content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('📨 Получен запрос:', request.action);
-    
-    if (request.action === 'getCallData') {
-        // Возвращаем данные из нашего монитора
-        sendResponse({
-            status: 'success',
-            data: monitor.callHistory
-        });
-        return true;
-    }
-    
-    if (request.action === 'test') {
-        sendResponse({ 
-            status: 'success', 
-            message: 'Background service работает',
-            monitorActive: monitor.monitoringActive,
-            historyCount: monitor.callHistory.length
-        });
-        return true;
+    try {
+        console.log('📨 Получен запрос:', request.action);
+        
+        if (request.action === 'getCallData') {
+            // Возвращаем данные из нашего монитора
+            sendResponse({
+                status: 'success',
+                data: monitor.callHistory
+            });
+            return true;
+        }
+        
+        if (request.action === 'test') {
+            sendResponse({ 
+                status: 'success', 
+                message: 'Background service работает',
+                monitorActive: monitor.monitoringActive,
+                historyCount: monitor.callHistory.length
+            });
+            return true;
+        }
+    } catch (error) {
+        console.error('❌ Ошибка в обработчике сообщений:', error);
+        sendResponse({ status: 'error', message: error.message });
     }
 });
 
@@ -549,6 +634,8 @@ globalThis.monitorStatus = async function() {
     console.log('Tab ID:', monitor.finesseTabId);
     console.log('Последний статус:', monitor.lastAgentStatus);
     console.log('В звонке:', monitor.isInCall);
+    console.log('Обработка звонка:', monitor.isProcessingCall);
+    console.log('Захват данных:', monitor.isCapturingData);
     console.log('Текущие данные:', monitor.currentCallData);
     console.log('История:', monitor.callHistory.length, 'звонков');
     console.groupEnd();
