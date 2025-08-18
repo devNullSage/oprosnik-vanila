@@ -2,12 +2,17 @@
  * scraper.ts - Functions for extracting data from the Finesse page.
  * These functions are injected into the Finesse page to run in its context.
  */
+import { AgentStatus, CallData } from '../types';
 
-export function extractAgentStatus() {
+
+export function extractAgentStatus(): AgentStatus {
     try {
         const statusEl = document.querySelector('#voice-state-select-headerOptionText');
+        if (!statusEl || !statusEl.textContent) {
+            return { status: null, timestamp: Date.now() };
+        }
         return {
-            status: statusEl ? statusEl.textContent.trim() : null,
+            status: statusEl.textContent.trim(),
             timestamp: Date.now()
         };
     } catch (error) {
@@ -16,18 +21,15 @@ export function extractAgentStatus() {
     }
 }
 
-export function extractCallData() {
+export function extractCallData(): Partial<CallData> {
     try {
-        const data = {
-            phone: null as string | null,
-            duration: null as string | null,
-            region: null as string | null,
+        const data: Partial<CallData> = {
             timestamp: Date.now()
         };
 
         const phoneEl = document.querySelector('[aria-label*="Участник"]');
         if (phoneEl) {
-            data.phone = phoneEl.textContent?.trim() || null;
+            data.phone = phoneEl.textContent?.trim() || undefined;
         }
 
         const specificSelectors = [
@@ -52,12 +54,12 @@ export function extractCallData() {
 
         const regionEl = document.querySelector('[class*="callVariableValue"] span');
         if (regionEl) {
-            data.region = regionEl.textContent?.trim() || null;
+            data.region = regionEl.textContent?.trim() || undefined;
         }
 
         return data;
     } catch (error) {
         console.error('Oprosnik Helper: Error extracting call data:', error);
-        return { phone: null, duration: null, region: null, timestamp: Date.now() };
+        return { timestamp: Date.now() };
     }
 }

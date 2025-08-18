@@ -4,72 +4,81 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Chrome/browser extension called "Oprosnik Helper" (version 4.0.0) that assists with filling out surveys by automatically copying data from Cisco Finesse. The extension is designed for internal use at RT (Rostelecom) and integrates with their CTP survey system.
+This is a Chrome/browser extension called "Oprosnik Helper" that assists with filling out surveys by automatically copying data from Cisco Finesse. The extension is designed for internal use at RT (Rostelecom) and integrates with their CTP survey system.
+
+The project is written in **TypeScript** and uses **React** for the popup UI. It is bundled using **Webpack**.
 
 ## Architecture
 
-The extension follows Chrome Extension Manifest V3 architecture with these core components:
+The extension follows a modern Manifest V3 architecture with a modular, event-driven design.
 
-### Background Service Worker (`background.js`)
-- **Primary Function**: Active monitoring of Cisco Finesse agent status and call data
-- **Key Class**: `FinesseActiveMonitor` - monitors agent status changes and captures call data
-- **Monitoring Strategy**: 
-  - Status checks every 3 seconds via alarms
-  - Active call monitoring every 1 second during calls
-  - Post-call capture with enhanced monitoring after call completion
-- **Data Storage**: Uses `chrome.storage.local` for call history and agent status
-- **Host**: Monitors `https://ssial000ap008.si.rt.ru:8445/desktop/container/*`
+### File Structure
 
-### Content Scripts
-1. **Form Modifier (`form-modifier.js`)**: 
-   - Hides unnecessary form fields on survey pages
-   - Removes specific options from dropdown lists
-   - Targets survey forms on `https://ctp.rt.ru/quiz*`
+The source code is located in the `oprosnik-extension/src/` directory.
 
-2. **Filler (`filler.js`)**:
-   - Creates "Вставить данные о звонке" button on survey pages
-   - Communicates with background worker to get call data
-   - Shows call history modal for selection when multiple calls exist
-   - Provides localStorage fallback mechanism
+- `oprosnik-extension/src/`: Main source directory.
+  - `background/`: Logic for the background service worker.
+    - `index.ts`: Main entry point, initializes and connects modules.
+    - `FinesseMonitor.ts`: Class responsible for monitoring the Finesse tab.
+    - `CallStorage.ts`: Class for managing call history in `chrome.storage`.
+    - `EventBus.ts`: A simple event bus for intra-script communication.
+    - `scraper.ts`: Functions that are injected into the Finesse page to extract data.
+  - `popup/`: The React-based popup application.
+    - `index.tsx`: Renders the React application.
+    - `Popup.tsx`: The main React component for the popup UI.
+    - `components/`: Directory for smaller, reusable React components.
+    - `hooks/`: Directory for custom React hooks (e.g., `useCallData.ts`).
+  - `scripts/`: Content scripts that run on web pages.
+    - `filler.ts`: Injects the "paste data" button on the survey page.
+    - `form-modifier.ts`: Hides unnecessary form fields.
+    - `parser.ts`: Runs on the Finesse page to assist the background script.
+    - `sidebar-hider.ts`: Adds a button to hide the sidebar on the survey page.
+  - `css/`: CSS files used by content scripts.
+  - `types.ts`: Contains shared TypeScript type definitions (e.g., `CallData`).
+  - `manifest.json`: The extension's manifest file.
+  - `popup.html`: The HTML file for the popup window.
+- `oprosnik-extension/icons/`: **(Outside of `src`)** Contains the extension's icons. This directory was left in its original location due to limitations with the file manipulation tools.
 
-3. **Parser (`parser.js`)**:
-   - Minimal script for Finesse pages
-   - Provides visual indicator of extension activity
-   - Responds to ping requests from background worker
+### Background Service Worker (`background/`)
 
-### Key Data Flow
-1. Background worker monitors Finesse for agent status changes
-2. When call starts (status = "Разговор"), begins active data capture
-3. When call ends (status = "Завершение"), performs enhanced post-call capture
-4. Call data includes: phone number, duration, region, timestamps
-5. Data is stored in call history (max 10 calls) in chrome.storage
-6. Survey pages can request and display this data via the filler script
+The background service worker uses an event-driven architecture.
+1.  **`index.ts`** initializes the `FinesseMonitor` and `CallStorage`.
+2.  **`FinesseMonitor.ts`** finds the Finesse tab and uses `chrome.alarms` to periodically inject functions from **`scraper.ts`** to check the agent's status.
+3.  When a call starts or ends, `FinesseMonitor` emits an event on the **`EventBus`**.
+4.  An event listener in `index.ts` catches the `call:end` event and uses **`CallStorage.ts`** to save the call data to `chrome.storage.local`.
 
-## Extension Permissions
-- `alarms`: For periodic monitoring
-- `storage`: Call history and settings
-- `tabs`: Tab management and detection
-- `scripting`: Content script injection
-- `notifications`: User notifications
-- Host permissions for CTP and Finesse domains
+### Popup (`popup/`)
 
-## Key Files to Understand
-- `manifest.json`: Extension configuration and permissions
-- `background.js:25-100`: Core monitoring logic initialization
-- `background.js:103-211`: Data extraction and processing functions
-- `filler.js:340-412`: Main button click handler and data retrieval
-- `filler.js:82-197`: Call history modal UI
+The popup is a **React** application written in **TypeScript**.
+- It uses a custom hook, `useCallData`, to fetch call history and status from `chrome.storage.local` and automatically updates when the data changes.
+- The UI is broken down into small, reusable components found in the `popup/components/` directory.
 
-## Development Notes
-- No package.json exists - this is a pure browser extension
-- No build process required - direct file deployment
-- Extension loads content scripts automatically based on URL patterns
-- All logging uses console with emoji prefixes for easy debugging
-- Uses Chrome Extension APIs exclusively (not web APIs)
+### Content Scripts (`scripts/`)
+
+The content scripts are written in TypeScript and are responsible for interacting with the web pages. They are defined in the `manifest.json` and bundled by Webpack.
+
+## Development
+
+This project uses `npm` for dependency management and `webpack` for bundling.
+
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Run Development Build**: For development with auto-recompilation.
+    ```bash
+    npm run dev
+    ```
+3.  **Run Production Build**: To create an optimized build for deployment.
+    ```bash
+    npm run build
+    ```
+The final, packaged extension will be located in the `dist/` directory.
 
 ## Testing the Extension
-1. Load extension in Chrome developer mode
-2. Navigate to Finesse URL to activate monitoring
-3. Navigate to CTP survey URL to test form modifications and data insertion
-4. Check browser console for detailed logging with emoji indicators
-5. Use `debugOprosnikHelper()` function in console for diagnostics
+1.  Run `npm run build`.
+2.  Load the `dist` directory as an unpacked extension in Chrome's developer mode (`chrome://extensions`).
+3.  Navigate to the Finesse URL to activate monitoring.
+4.  Navigate to the CTP survey URL to test form modifications and data insertion.
+5.  Check the browser console and the extension's service worker console for detailed logging.
+6.  Use `debugOprosnikHelper()` function in the survey page console for diagnostics.

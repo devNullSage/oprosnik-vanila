@@ -16,7 +16,7 @@ const RegionChart: FC<RegionChartProps> = ({ history }) => {
   const maxCount = useMemo(() => Math.max(1, ...Object.values(regionCounts)), [regionCounts]);
 
   const sortedRegions = useMemo(() => Object.entries(regionCounts)
-    .sort(([, a], [, b]) => b - a)
+    .sort(([, a]: [string, number], [, b]: [string, number]) => b - a)
     .slice(0, 5), [regionCounts]);
 
   if (sortedRegions.length === 0) {
@@ -25,7 +25,7 @@ const RegionChart: FC<RegionChartProps> = ({ history }) => {
 
   return (
     <div className="space-y-2">
-      {sortedRegions.map(([region, count]) => (
+      {sortedRegions.map(([region, count]: [string, number]) => (
           <div key={region} className="flex items-center gap-2">
             <span className="text-sm w-24 truncate" title={region}>{region}</span>
             <div className="flex-1 bg-gray-200 rounded-full h-6 relative">

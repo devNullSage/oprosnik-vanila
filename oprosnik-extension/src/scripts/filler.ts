@@ -15,31 +15,28 @@ function initializeMessageAPI(): boolean {
 }
 
 function safeSendMessage(message: any, callback: (response: any) => void): void {
-    if (!messageAPI) {
-        console.error('❌ Message API not initialized');
+    const apiAvailable = messageAPI !== null || initializeMessageAPI();
+
+    if (!apiAvailable) {
+        console.error('❌ Message API could not be initialized');
         callback({ status: 'error', message: 'Extension API not available' });
         return;
     }
 
-    try {
-        messageAPI.sendMessage(message, (response) => {
-            if (messageAPI?.lastError) {
-                console.error('❌ Message error:', messageAPI.lastError.message);
-                callback({ status: 'error', message: messageAPI.lastError.message });
-            } else {
-                callback(response);
-            }
-        });
-    } catch (error) {
-        console.error('❌ Exception during sendMessage:', error);
-        callback({ status: 'error', message: (error as Error).message });
-    }
+    // Non-null assertion `!` is safe here because of the check above.
+    messageAPI!.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+            console.error('❌ Message error:', chrome.runtime.lastError.message);
+            callback({ status: 'error', message: chrome.runtime.lastError.message });
+        } else {
+            callback(response);
+        }
+    });
 }
 
 function showCallHistoryModal(callHistory: CallData[]): void {
     const overlay = document.createElement('div');
     overlay.id = 'oprosnik-modal-overlay';
-    // Styles will be handled by CSS injected by the extension
 
     const modal = document.createElement('div');
     modal.id = 'oprosnik-modal-content';
@@ -112,11 +109,6 @@ function createPasteButton(): void {
 function handlePasteButtonClick(event: MouseEvent): void {
     const button = event.target as HTMLButtonElement;
 
-    if (!messageAPI) {
-        alert('API расширения не доступно.');
-        return;
-    }
-
     const originalText = button.innerText;
     button.innerText = 'Получение данных...';
     button.disabled = true;
@@ -134,7 +126,7 @@ function handlePasteButtonClick(event: MouseEvent): void {
                 alert('Нет доступных данных о звонках.');
             }
         } else {
-            alert('Не удалось получить данные о звонках.');
+            alert(`Не удалось получить данные о звонках. ${response?.message || ''}`);
         }
     });
 }
@@ -147,9 +139,9 @@ function pasteDataIntoComment(callData: CallData): void {
     }
 
     const formattedData = `
-Номер телефона: ${callData.phone}
-Длительность: ${callData.duration}
-Регион: ${callData.region}
+Номер телефона: ${callData.phone || ''}
+Длительность: ${callData.duration || ''}
+Регион: ${callData.region || ''}
 `;
 
     commentTextarea.value = `${formattedData.trim()}\n\n${commentTextarea.value}`;
