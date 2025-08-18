@@ -1,11 +1,11 @@
 /**
- * parser.js - Минимальная версия
- * Служит только для ответов на запросы от background
+ * parser.ts - Minimal version
+ * Only serves to respond to requests from the background script.
  */
 
-console.log('✅ Parser.js загружен (минимальная версия)');
+console.log('✅ Parser.ts loaded (minimal version)');
 
-// Простой индикатор для визуального подтверждения
+// Simple indicator for visual confirmation
 const indicator = document.createElement('div');
 indicator.style.cssText = `
     position: fixed;
@@ -21,19 +21,19 @@ indicator.style.cssText = `
 indicator.textContent = '✓ Oprosnik Helper';
 document.body.appendChild(indicator);
 
-// Удаляем индикатор через 5 секунд
+// Remove indicator after 5 seconds
 setTimeout(() => indicator.remove(), 5000);
 
-// Обработчик сообщений - только для ping
+// Message listener - only for ping
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'ping') {
         sendResponse({ 
             status: 'pong',
-            message: 'Parser активен',
+            message: 'Parser is active',
             url: window.location.href
         });
-        return true;
+        return true; // Keep the message channel open for the asynchronous response
     }
 });
 
-console.log('📡 Parser готов к работе');
+console.log('📡 Parser is ready.');
